@@ -1,20 +1,22 @@
-const morgan = require('morgan');
 const express = require('express');
-const tour = require('./controllers/tour-controller');
-const AppError = require('./utils/app-error')
-const globalErrorHandler = require('./error-handler/global-error-handler');
+const app = express();
 
-require('./config/db-connection')();
+process.on('uncaughtException', err => {
+    console.log('UNCAUGHT EXCEPTION! Shutting down....');
+    console.log(err.name, err.message);
+    process.exit(1);
+});
 
-module.exports = function (app) {
-    app.use(express.json());
-    app.use(morgan('dev'));
+require('./routes/api-routes')(app);
 
-    app.use('/api/tour', tour);
+const port = process.env.PORT || 8080;
+const server = app.listen(port, () => console.log(`App is running at port ${port}...`));
 
-    app.all('*', (req, res, next) => {
-        next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
+process.on('unhandledRejection', err => {
+    console.log('UNHANDLED REJECTION! Shutting down....');
+    console.log(err.name, err.message);
+    server.close(() => { // before shutting down the server it will execute all it's request
+        process.exit(1);//when app is crashed node js application stayed unclean state sot that
+        // we need to terminate the process
     });
-
-    app.use(globalErrorHandler)
-}
+});
